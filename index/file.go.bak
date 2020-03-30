@@ -1,0 +1,101 @@
+// package index
+
+// import (
+// 	"fmt"
+// 	"io/ioutil"
+// 	"os"
+// 	"path"
+// 	"path/filepath"
+// )
+
+// // MatchPost 匹配的文档
+// type MatchPost struct {
+// 	FileName string
+// 	StartPos int
+// 	EndPos   int
+// }
+
+// // LoadIndex 加载索引
+// func LoadIndex() {
+// 	dirPath := "/Users/gao/code/"
+// 	if info, err := os.Stat(dirPath); err == nil && !info.IsDir() {
+// 		panic("path should be dir")
+// 	}
+// 	files, err := ioutil.ReadDir(dirPath)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	for _, f := range files {
+// 		sf := path.Ext(f.Name())
+// 		if sf != ".txt" && sf != ".md" {
+// 			continue
+// 		}
+// 		fp := filepath.Join(dirPath, f.Name())
+// 		fmt.Println(fp)
+// 		byteContent, err := ioutil.ReadFile(fp)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		segments := seg.Segment(byteContent)
+// 		for _, r := range segments {
+// 			word := r.Token().Text()
+// 			//fmt.Println(r.Token().Text(), r.Token().Pos(), r.Token().Frequency())
+// 			matchPost := &MatchPost{
+// 				FileName: f.Name(),
+// 				StartPos: r.Start(),
+// 				EndPos:   r.End(),
+// 			}
+// 			if _, found := DataMap[word]; !found {
+// 				var x []*MatchPost
+// 				DataMap[word] = &Index{
+// 					Frequency:  r.Token().Frequency(),
+// 					Property:   r.Token().Pos(),
+// 					MatchPosts: x,
+// 				}
+// 			}
+// 			DataMap[word].MatchPosts = append(DataMap[word].MatchPosts, matchPost)
+// 		}
+// 	}
+// }
+
+// // Search 搜索
+// func Search(q string, matchAll bool) []string {
+// 	freq := make(map[string]int)
+// 	segments := seg.Segment([]byte(q))
+// 	for _, r := range segments {
+// 		word := r.Token().Text()
+// 		fmt.Println("word = ", word)
+// 		for key, value := range DataMap {
+// 			if word != key {
+// 				continue
+// 			}
+// 			for _, post := range value.MatchPosts {
+// 				if _, found := freq[post.FileName]; found {
+// 					freq[post.FileName]++
+// 				} else {
+// 					freq[post.FileName] = 1
+// 				}
+// 			}
+// 		}
+// 	}
+// 	var result []string
+// 	for name, count := range freq {
+// 		println("name = ", name)
+// 		var i int
+// 		for i, val := range result {
+// 			if freq[val] >= count {
+// 				continue
+// 			}
+// 			x := append(result[:i], name)
+// 			result = append(x, result[i:]...)
+// 			break
+// 		}
+// 		if i >= len(result) {
+// 			result = append(result, name)
+// 		}
+// 	}
+// 	for _, r := range result {
+// 		println(r)
+// 	}
+// 	return result
+// }
