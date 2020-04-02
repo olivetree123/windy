@@ -21,7 +21,7 @@ func NewDatabase(name string) (*Database, error) {
 // ListDatabase 数据库列表
 func ListDatabase() ([]Database, error) {
 	var dbs []Database
-	err := DB.Find(&dbs, "status = %d", 1).Error
+	err := DB.Find(&dbs, "status = ?", 1).Error
 	if err != nil {
 		return nil, err
 	}

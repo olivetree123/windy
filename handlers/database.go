@@ -30,13 +30,13 @@ func (param *DBCreateParam) Validate() (bool, error) {
 }
 
 // Load 加载参数
-func (param *DBCreateParam) Load(request *http.Request) {
+func (param *DBCreateParam) Load(request *http.Request) error {
 	decoder := json.NewDecoder(request.Body)
 	err := decoder.Decode(param)
 	if err != nil {
-		log.Error(err)
-		return coco.ErrorResponse(100)
+		return err
 	}
+	return nil
 }
 
 // DBCreateHandler 创建数据库

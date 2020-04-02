@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/jinzhu/gorm"
@@ -19,15 +20,15 @@ var DBDir = "/Users/gao/windy/"
 
 // BaseModel 基础模型
 type BaseModel struct {
-	UID       uint      `gorm:"primary_key" json:"uid"`
-	Status    bool      `gorm:"default:true" json:"status"` // 0 删除，1 正常
+	UID       string    `gorm:"primary_key" json:"uid"`
+	Status    bool      `gorm:"default:true" json:"-"` // 0 删除，1 正常
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 // BeforeCreate 写前处理
 func (model *BaseModel) BeforeCreate(scope *gorm.Scope) error {
-	scope.SetColumn("UID", uuid.NewV4().String())
+	scope.SetColumn("UID", strings.ReplaceAll(uuid.NewV4().String(), "-", ""))
 	return nil
 }
 

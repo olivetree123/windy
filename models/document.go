@@ -3,7 +3,7 @@ package models
 // Document 文档
 type Document struct {
 	BaseModel
-	DbID    string `json:"db_id"`   // 所属数据库
+	DbID    string `json:"dbID"`    // 所属数据库
 	Content string `json:"content"` // 文档内容
 }
 
@@ -18,4 +18,13 @@ func NewDocument(dbID string, content string) (*Document, error) {
 		return nil, err
 	}
 	return &doc, nil
+}
+
+
+func ListDocument(dbID string) ([]Document, error) {
+	var docs []Document
+	if err := DB.Find(&docs, "db_id = ? and status = ?", dbID, true).Error; err != nil {
+		return nil, err
+	}
+	return docs, nil
 }

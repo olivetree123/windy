@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"windy/index"
 	"windy/log"
@@ -29,13 +30,13 @@ func (param *DocCreateParam) Validate() (bool, error) {
 }
 
 // Load 加载参数
-func (param *DocCreateParam) Load(request *http.Request) {
+func (param *DocCreateParam) Load(request *http.Request) error {
 	decoder := json.NewDecoder(request.Body)
 	err := decoder.Decode(param)
 	if err != nil {
-		log.Error(err)
-		return coco.ErrorResponse(100)
+		return err
 	}
+	return nil
 }
 
 // DocCreateHandler 创建文档
@@ -47,9 +48,15 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 		log.Error(err)
 		return coco.ErrorResponse(100)
 	}
-	doc, err := models.NewDocument(dbID, content)
+	// TODO: 相同的内容是否允许重复写入？
+	doc, err := models.NewDocument(param.DbID, param.Content)
 	if err != nil {
-		log.Info(err)
+		log.Error(err)
+		return coco.ErrorResponse(100)
+	}
+	words := index.SplitWord(param.Content)
+	if err = models.CreateIndexForWords(param.DbID, doc.UID, words); err != nil {
+		log.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	return coco.APIResponse(doc)
@@ -57,7 +64,28 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 
 // DocListHandler 获取文档列表，可以根据关键字进行过滤
 func DocListHandler(c *coco.Coco) coco.Result {
-	dbID := c.Params.ByName("db_id")
+	c.Request.
+	params := httprouter.ParamsFromContext(c.Request.Context())
+	a := params.ByName("dbID")
+	b := params.ByName("name")
+	log.Info(a)
+	log.Info(b)
+	dbID := c.Params.ByName("dbID")
+	if dbID == "" {
+		log.Error("dbID should not be null")
+		return coco.ErrorResponse(100)
+	}
+	docs, err := models.ListDocument(dbID)
+	if err != nil {
+		log.Error(err)
+		return coco.ErrorResponse(100)
+	}
+	return coco.APIResponse(docs)
+}
+
+// DocSearchHandler 搜索文档
+func DocSearchHandler(c *coco.Coco) coco.Result {
+	dbID := c.Params.ByName("dbID")
 	query := c.Params.ByName("query")
 	var words []string
 	if query != "" {
