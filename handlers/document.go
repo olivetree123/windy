@@ -3,7 +3,6 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
-	"github.com/julienschmidt/httprouter"
 	"net/http"
 	"windy/index"
 	"windy/log"
@@ -64,12 +63,6 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 
 // DocListHandler 获取文档列表，可以根据关键字进行过滤
 func DocListHandler(c *coco.Coco) coco.Result {
-	c.Request.
-	params := httprouter.ParamsFromContext(c.Request.Context())
-	a := params.ByName("dbID")
-	b := params.ByName("name")
-	log.Info(a)
-	log.Info(b)
 	dbID := c.Params.ByName("dbID")
 	if dbID == "" {
 		log.Error("dbID should not be null")
