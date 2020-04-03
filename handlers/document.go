@@ -63,7 +63,8 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 
 // DocListHandler 获取文档列表，可以根据关键字进行过滤
 func DocListHandler(c *coco.Coco) coco.Result {
-	dbID := c.Params.ByName("dbID")
+	params := c.Request.URL.Query()
+	dbID := params.Get("dbID")
 	if dbID == "" {
 		log.Error("dbID should not be null")
 		return coco.ErrorResponse(100)
@@ -78,8 +79,9 @@ func DocListHandler(c *coco.Coco) coco.Result {
 
 // DocSearchHandler 搜索文档
 func DocSearchHandler(c *coco.Coco) coco.Result {
-	dbID := c.Params.ByName("dbID")
-	query := c.Params.ByName("query")
+	params := c.Request.URL.Query()
+	dbID := params.Get("dbID")
+	query := params.Get("query")
 	var words []string
 	if query != "" {
 		words = index.SplitWord(query)
