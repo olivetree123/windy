@@ -44,18 +44,22 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 	param.Load(c.Request)
 	status, err := param.Validate()
 	if !status {
-		log.Error(err)
+		log.Logger.Error(err)
+		return coco.ErrorResponse(100)
+	}
+	if _, err := models.GetDatabase(param.DbID); err != nil {
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	// TODO: 相同的内容是否允许重复写入？
 	doc, err := models.NewDocument(param.DbID, param.Content)
 	if err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	words := index.SplitWord(param.Content)
 	if err = models.CreateIndexForWords(param.DbID, doc.UID, words); err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	return coco.APIResponse(doc)
@@ -66,12 +70,12 @@ func DocListHandler(c *coco.Coco) coco.Result {
 	params := c.Request.URL.Query()
 	dbID := params.Get("dbID")
 	if dbID == "" {
-		log.Error("dbID should not be null")
+		log.Logger.Error("dbID should not be null")
 		return coco.ErrorResponse(100)
 	}
 	docs, err := models.ListDocument(dbID)
 	if err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	return coco.APIResponse(docs)
@@ -88,7 +92,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 	}
 	indexes, err := models.FindIndex(dbID, words)
 	if err != nil {
-		log.Info(err)
+		log.Logger.Info(err)
 		return coco.ErrorResponse(100)
 	}
 	return coco.APIResponse(indexes)

@@ -45,12 +45,12 @@ func DBCreateHandler(c *coco.Coco) coco.Result {
 	param.Load(c.Request)
 	status, err := param.Validate()
 	if !status {
-		log.Error(err)
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	db, err := models.NewDatabase(param.Name)
 	if err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	return coco.APIResponse(db)
@@ -60,7 +60,7 @@ func DBCreateHandler(c *coco.Coco) coco.Result {
 func DBListHandler(c *coco.Coco) coco.Result {
 	dbs, err := models.ListDatabase()
 	if err != nil {
-		log.Error(err)
+		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
 	return coco.APIResponse(dbs)

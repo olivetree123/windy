@@ -1,13 +1,14 @@
 package main
 
 import (
-	"windy/handlers"
-
 	"github.com/olivetree123/coco"
+	"windy/handlers"
+	"windy/timer"
 )
 
 func main() {
 	// index.LoadIndex()
+	go timer.Timer()
 	c := coco.NewCoco()
 	c.AddRouter("POST", "/windy/db/create", handlers.DBCreateHandler)
 	c.AddRouter("GET", "/windy/db/list", handlers.DBListHandler)

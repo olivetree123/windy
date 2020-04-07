@@ -63,6 +63,15 @@ func InitDB() {
 	if !DB.HasTable(Index{}) {
 		DB.CreateTable(Index{})
 	}
+	if !DB.HasTable(DataSourceDB{}) {
+		DB.CreateTable(DataSourceDB{})
+	}
+	if !DB.HasTable(DataSourceTable{}) {
+		DB.CreateTable(DataSourceTable{})
+	}
+	if !DB.HasTable(DataSourceDocument{}) {
+		DB.CreateTable(DataSourceDocument{})
+	}
 }
 
 func init() {

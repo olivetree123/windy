@@ -20,7 +20,13 @@ func NewDocument(dbID string, content string) (*Document, error) {
 	return &doc, nil
 }
 
+// UpdateDocument 更新文档
+func UpdateDocument(documentID string, content string) error {
+	err := DB.Model(&Document{}).Where("uid = ?", documentID).Update("content", content).Error
+	return err
+}
 
+// ListDocument 获取文档列表
 func ListDocument(dbID string) ([]Document, error) {
 	var docs []Document
 	if err := DB.Find(&docs, "db_id = ? and status = ?", dbID, true).Error; err != nil {

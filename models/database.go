@@ -18,6 +18,15 @@ func NewDatabase(name string) (*Database, error) {
 	return &db, nil
 }
 
+// GetDatabase 获取数据库
+func GetDatabase(uid string) (*Database, error) {
+	var database Database
+	if err := DB.First(&database, "uid = ? and status = ?", uid, true).Error; err != nil {
+		return nil, err
+	}
+	return &database, nil
+}
+
 // ListDatabase 数据库列表
 func ListDatabase() ([]Database, error) {
 	var dbs []Database
