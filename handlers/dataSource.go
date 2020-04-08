@@ -3,7 +3,9 @@ package handlers
 import (
 	"encoding/json"
 	"errors"
+	"github.com/jinzhu/gorm"
 	"net/http"
+	"windy/config"
 	"windy/log"
 	"windy/models"
 
@@ -50,14 +52,35 @@ func (param *DataSourceDBCreateParam) Load(request *http.Request) error {
 	return nil
 }
 
+type DataSourceFieldCreateParam struct {
+	Name     string
+	Type     string
+	UnSearch bool // 是否参与检索，默认为 false ，表示参与搜素
+}
+
 // DataSourceTableCreateParam 创建数据源表参数
 type DataSourceTableCreateParam struct {
 	DataSourceDBID  string
-	Name            string   // table name
-	Fields          []string // 需要进行搜索的字段
-	PrimaryKey      string   // 主键字段
-	IndexDBID       string   // 索引所在的库
+	Name            string                       // table name
+	Fields          []DataSourceFieldCreateParam // 需要进行搜索的字段
+	PrimaryKey      string                       // 主键字段
+	IndexDBID       string                       // 索引所在的库
 	UpdateTimeField string
+}
+
+// Validate 参数验证
+func (param *DataSourceFieldCreateParam) Validate() (bool, error) {
+	if param.Name == "" {
+		return false, errors.New("field name should not be null")
+	}
+	if param.Type == "" {
+		return false, errors.New("field name should not be null")
+	}
+	isValid := config.CheckType(param.Type)
+	if !isValid {
+		return false, errors.New("invalid type")
+	}
+	return true, nil
 }
 
 // Validate 参数验证
@@ -79,6 +102,12 @@ func (param *DataSourceTableCreateParam) Validate() (bool, error) {
 	}
 	if param.UpdateTimeField == "" {
 		return false, errors.New("updateTimeField should not be null")
+	}
+	for _, field := range param.Fields {
+		_, err := field.Validate()
+		if err != nil {
+			return false, err
+		}
 	}
 	return true, nil
 }
@@ -164,7 +193,32 @@ func DataSourceTableCreateHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error("table already exists")
 		return coco.ErrorResponse(100)
 	}
-	table, err := models.NewDataSourceTable(param.DataSourceDBID, param.Name, param.Fields, param.PrimaryKey, param.IndexDBID, param.UpdateTimeField)
+	var table models.DataSourceTable
+	err = models.DB.Transaction(func(tx *gorm.DB) error {
+		table = models.DataSourceTable{
+			DataSourceDBID:  param.DataSourceDBID,
+			Name:            param.Name,
+			PrimaryKey:      param.PrimaryKey,
+			IndexDBID:       param.IndexDBID,
+			UpdateTimeField: param.UpdateTimeField,
+		}
+		if err := tx.Create(&table).Error; err != nil {
+			return err
+		}
+		for _, fieldParam := range param.Fields {
+			field := models.DataSourceField{
+				DataSourceTableID: table.UID,
+				Name:              fieldParam.Name,
+				Type:              fieldParam.Type,
+				UnSearch:          fieldParam.UnSearch,
+			}
+			if err = tx.Create(&field).Error; err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+	//table, err := models.NewDataSourceTable(param.DataSourceDBID, param.Name, param.PrimaryKey, param.IndexDBID, param.UpdateTimeField)
 	if err != nil {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)

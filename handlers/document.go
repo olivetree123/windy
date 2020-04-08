@@ -107,6 +107,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 	}
 	var result []*entity.IndexEntity
 	for _, idx := range indexes {
+		log.Logger.Info("documentID = ", idx.DocID)
 		r, err := entity.NewIndexEntity(idx.UID, idx.Word, idx.DocID, idx.CreatedAt, idx.UpdatedAt)
 		if err != nil {
 			log.Logger.Info(err)

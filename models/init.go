@@ -72,6 +72,9 @@ func InitDB() {
 	if !DB.HasTable(DataSourceDocument{}) {
 		DB.CreateTable(DataSourceDocument{})
 	}
+	if !DB.HasTable(DataSourceField{}) {
+		DB.CreateTable(DataSourceField{})
+	}
 }
 
 func init() {

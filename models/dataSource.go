@@ -1,7 +1,6 @@
 package models
 
 import (
-	"strings"
 	"time"
 )
 
@@ -19,13 +18,22 @@ type DataSourceDB struct {
 // DataSourceTable 数据源的表
 type DataSourceTable struct {
 	BaseModel
-	DataSourceDBID  string    `json:"dataSourceDBID"`
-	Name            string    `json:"name"`
-	Fields          string    `json:"fields"`
+	DataSourceDBID string `json:"dataSourceDBID"`
+	Name           string `json:"name"`
+	//Fields          string    `json:"fields"`
 	PrimaryKey      string    `json:"primaryKey"`
 	IndexDBID       string    `json:"indexDBID"`
 	UpdateTimeField string    `json:"updateTimeField"`
 	LastUpdateTime  time.Time `json:"lastUpdateTime"`
+}
+
+// DataSourceField 数据源表的字段
+type DataSourceField struct {
+	BaseModel
+	DataSourceTableID string `json:"dataSourceTableID"`
+	Name              string `json:"name"`     // 字段名称
+	Type              string `json:"type"`     // 字段类型，支持：int/float/string/datetime/bool
+	UnSearch          bool   `json:"unSearch"` // 是否参与检索，默认 true
 }
 
 // DataSourceDocument 数据源表与 document 的关系
@@ -71,12 +79,10 @@ func ListDataSourceDB() ([]DataSourceDB, error) {
 }
 
 // NewDataSourceTable 新建数据源的表
-func NewDataSourceTable(dataSourceDBID string, name string, fields []string, primaryKey string, indexDBID string, updateTimeField string) (*DataSourceTable, error) {
-	fieldsStr := strings.Join(fields, ",")
+func NewDataSourceTable(dataSourceDBID string, name string, primaryKey string, indexDBID string, updateTimeField string) (*DataSourceTable, error) {
 	table := DataSourceTable{
 		DataSourceDBID:  dataSourceDBID,
 		Name:            name,
-		Fields:          fieldsStr,
 		PrimaryKey:      primaryKey,
 		IndexDBID:       indexDBID,
 		UpdateTimeField: updateTimeField,
@@ -85,6 +91,20 @@ func NewDataSourceTable(dataSourceDBID string, name string, fields []string, pri
 		return nil, err
 	}
 	return &table, nil
+}
+
+// NewDataSourceField 新建数据源表的字段
+func NewDataSourceField(dataSourceTableID string, fieldName string, fieldType string, unSearch bool) (*DataSourceField, error) {
+	field := DataSourceField{
+		DataSourceTableID: dataSourceTableID,
+		Name:              fieldName,
+		Type:              fieldType,
+		UnSearch:          unSearch,
+	}
+	if err := DB.Create(&field).Error; err != nil {
+		return nil, err
+	}
+	return &field, nil
 }
 
 // GetDataSourceTable 根据名称获取数据源表
@@ -125,4 +145,13 @@ func GetDataSourceDocument(dataSourceTableID string, primaryValue string) (*Data
 		return nil, err
 	}
 	return &doc, nil
+}
+
+// Fields 获取 DataSourceTable 的所有字段
+func (table *DataSourceTable) Fields() ([]DataSourceField, error) {
+	var fields []DataSourceField
+	if err := DB.Find(&fields, "data_source_table_id = ? and status = ?", table.UID, true).Error; err != nil {
+		return nil, err
+	}
+	return fields, nil
 }
