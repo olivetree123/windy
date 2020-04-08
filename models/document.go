@@ -1,5 +1,7 @@
 package models
 
+import "windy/log"
+
 // Document 文档
 type Document struct {
 	BaseModel
@@ -44,4 +46,36 @@ func ListDocument(dbID string) ([]Document, error) {
 		return nil, err
 	}
 	return docs, nil
+}
+
+// SearchDocument 查找索引
+func SearchDocument(dbID string, words []string) ([]Document, error) {
+	var docs []string
+	rows, err := DB.Raw("select doc_id, count(1) as count1 from `index` where db_id = ? and status = ? and word in (?) group by doc_id order by count1 desc limit 10", dbID, true, words).Rows()
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var docID string
+		var count int
+		if err = rows.Scan(&docID, &count); err != nil {
+			return nil, err
+		}
+		log.Logger.Info(docID, "\t", count)
+		docs = append(docs, docID)
+	}
+	var documents []Document
+	if err = DB.Where("uid in (?)", docs).Find(&documents).Error; err != nil {
+		return nil, err
+	}
+	var result []Document
+	for _, docID := range docs {
+		for _, document := range documents {
+			if document.UID == docID {
+				result = append(result, document)
+				break
+			}
+		}
+	}
+	return result, nil
 }

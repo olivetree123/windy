@@ -2,6 +2,7 @@ package models
 
 import (
 	"github.com/jinzhu/gorm"
+	"windy/index"
 )
 
 // Index 索引，word 在文档中出现的位置和次数
@@ -45,20 +46,6 @@ func GetIndex(dbID string, docID string, word string) (*Index, error) {
 	return &index, nil
 }
 
-// FindIndex 查找索引
-func FindIndex(dbID string, words []string) ([]Index, error) {
-	var indexes []Index
-	query := DB.Where("db_id = ? and status = ?", dbID, true)
-	if len(words) > 0 {
-		query = query.Where("word in (?)", words)
-	}
-	err := query.Find(&indexes).Error
-	if err != nil {
-		return nil, err
-	}
-	return indexes, nil
-}
-
 func (index *Index) AddCount() error {
 	index.Count++
 	err := DB.Save(index).Error
@@ -69,7 +56,7 @@ func (index *Index) AddCount() error {
 }
 
 // CreateIndexForWords 为多个 word 批量创建索引
-func CreateIndexForWords(dbID string, docID string, words []string) error {
+func CreateIndexForWords(dbID string, docID string, words []index.Word) error {
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		for _, word := range words {
 			var idx Index
@@ -84,11 +71,11 @@ func CreateIndexForWords(dbID string, docID string, words []string) error {
 			if err != gorm.ErrRecordNotFound {
 				return err
 			}
-			idx= Index{
-				Word:  word,
-				DbID:  dbID,
-				DocID: docID,
-				Count: 1,
+			idx = Index{
+				Word:     word.Content,
+				DbID:     dbID,
+				DocID:    docID,
+				Count:    word.Count,
 				Position: "",
 			}
 			if err = tx.Create(&idx).Error; err != nil {

@@ -88,7 +88,7 @@ func Timer() {
 				err = models.DB.Transaction(func(tx *gorm.DB) error {
 					now := time.Now()
 					sql := fmt.Sprintf("SELECT %s FROM %s where %s > '%s' and %s <= '%s'", fieldsStr, table.Name, table.UpdateTimeField, table.LastUpdateTime, table.UpdateTimeField, now)
-					log.Logger.Info(sql)
+					//log.Logger.Info(sql)
 					rows, err := conn.Raw(sql).Rows()
 					if err != nil {
 						return err
@@ -156,10 +156,10 @@ func Timer() {
 								words := index.SplitWord(value.(string))
 								for _, word := range words {
 									idx := models.Index{
-										Word:  word,
+										Word:  word.Content,
 										DbID:  table.IndexDBID,
 										DocID: doc2.DocumentID,
-										Count: 1,
+										Count: word.Count,
 										// Position: strings.Join(position2, ","),
 										Position: "",
 									}
@@ -193,10 +193,10 @@ func Timer() {
 							words := index.SplitWord(value.(string))
 							for _, word := range words {
 								idx := models.Index{
-									Word:  word,
+									Word:  word.Content,
 									DbID:  table.IndexDBID,
 									DocID: doc.UID,
-									Count: 1,
+									Count: word.Count,
 									// Position: strings.Join(position2, ","),
 									Position: "",
 								}

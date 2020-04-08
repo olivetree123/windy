@@ -16,6 +16,11 @@ type Index struct {
 	MatchDocs []*MatchDoc
 }
 
+type Word struct {
+	Content string
+	Count   int
+}
+
 // DataMap 数据字典，用户将索引数据全部加载到内存
 var DataMap map[string]*Index
 
@@ -27,8 +32,26 @@ func init() {
 }
 
 // SplitWord 分词
-func SplitWord(sentence string) []string {
+func SplitWord(sentence string) []Word {
+	var words []Word
 	segments := seg.Segment([]byte(sentence))
-	words := sego.SegmentsToSlice(segments, true)
+	rs := sego.SegmentsToSlice(segments, true)
+	for _, r := range rs {
+		var found bool
+		for _, word := range words {
+			if word.Content == r {
+				word.Count++
+				found = true
+				break
+			}
+		}
+		if !found {
+			word := Word{
+				Content: r,
+				Count:   1,
+			}
+			words = append(words, word)
+		}
+	}
 	return words
 }

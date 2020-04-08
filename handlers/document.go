@@ -96,19 +96,19 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 	params := c.Request.URL.Query()
 	dbID := params.Get("dbID")
 	query := params.Get("query")
-	var words []string
-	if query != "" {
-		words = index.SplitWord(query)
+	words := index.SplitWord(query)
+	var ws []string
+	for _, word := range words {
+		ws = append(ws, word.Content)
 	}
-	indexes, err := models.FindIndex(dbID, words)
+	documents, err := models.SearchDocument(dbID, ws)
 	if err != nil {
 		log.Logger.Info(err)
 		return coco.ErrorResponse(100)
 	}
-	var result []*entity.IndexEntity
-	for _, idx := range indexes {
-		log.Logger.Info("documentID = ", idx.DocID)
-		r, err := entity.NewIndexEntity(idx.UID, idx.Word, idx.DocID, idx.CreatedAt, idx.UpdatedAt)
+	var result []*entity.DocumentEntity
+	for _, doc := range documents {
+		r, err := entity.NewDocumentEntity(doc.UID, doc.Content, doc.Format, doc.CreatedAt, doc.UpdatedAt)
 		if err != nil {
 			log.Logger.Info(err)
 			return coco.ErrorResponse(100)
