@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"windy/config"
+	"windy/entity"
 	"windy/index"
 	"windy/log"
 	"windy/models"
@@ -15,6 +17,7 @@ import (
 type DocCreateParam struct {
 	DbID    string
 	Content string
+	Format  string
 }
 
 // Validate 参数验证
@@ -25,6 +28,9 @@ func (param *DocCreateParam) Validate() (bool, error) {
 	if param.Content == "" {
 		return false, errors.New("content should not be null")
 	}
+	for param.Format != config.FormatString && param.Format != config.FormatJson {
+		return false, errors.New("invalid format, format should be string or json")
+	}
 	return true, nil
 }
 
@@ -34,6 +40,9 @@ func (param *DocCreateParam) Load(request *http.Request) error {
 	err := decoder.Decode(param)
 	if err != nil {
 		return err
+	}
+	if param.Format == "" {
+		param.Format = config.FormatString
 	}
 	return nil
 }
@@ -52,7 +61,8 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 		return coco.ErrorResponse(100)
 	}
 	// TODO: 相同的内容是否允许重复写入？
-	doc, err := models.NewDocument(param.DbID, param.Content)
+	// 这里需要用事务
+	doc, err := models.NewDocument(param.DbID, param.Content, param.Format)
 	if err != nil {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
@@ -95,5 +105,14 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 		log.Logger.Info(err)
 		return coco.ErrorResponse(100)
 	}
-	return coco.APIResponse(indexes)
+	var result []*entity.IndexEntity
+	for _, idx := range indexes {
+		r, err := entity.NewIndexEntity(idx.UID, idx.Word, idx.DocID, idx.CreatedAt, idx.UpdatedAt)
+		if err != nil {
+			log.Logger.Info(err)
+			return coco.ErrorResponse(100)
+		}
+		result = append(result, r)
+	}
+	return coco.APIResponse(result)
 }

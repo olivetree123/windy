@@ -8,6 +8,7 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jinzhu/gorm"
 	"time"
+	"windy/config"
 	"windy/index"
 	"windy/log"
 	"windy/models"
@@ -29,7 +30,6 @@ func Timer() {
 	t := time.NewTicker(duration)
 	defer t.Stop()
 	for {
-		log.Logger.Info("timer...")
 		<-t.C
 		dbs, err := models.ListDataSourceDB()
 		if err != nil {
@@ -44,59 +44,61 @@ func Timer() {
 			}
 			dbURL := fmt.Sprintf("%s:%s@(%s:%d)/%s", db.UserName, db.Password, db.Host, db.Port, db.DBName)
 			conn, err := gorm.Open("mysql", dbURL)
-			//conn, err := sql.Open("mysql", dbURL)
 			if err != nil {
 				log.Logger.Error(err)
 				continue
 			}
 			for _, table := range tables {
-				sql := fmt.Sprintf("SELECT %s FROM %s order by create_time desc limit 20", table.Fields, table.Name)
-				log.Logger.Info(sql)
-				rows, err := conn.Raw(sql).Rows()
-				if err != nil {
-					log.Logger.Error(err)
-					continue
-				}
-				columns, err := rows.Columns()
-				if err != nil {
-					log.Logger.Error(err)
-					continue
-				}
-				length := len(columns)
-				for rows.Next() {
-					data := makeResultReceiver(length)
-					if err = rows.Scan(data...); err != nil {
-						log.Logger.Error(err)
-						continue
-					}
-					result := make(map[string]interface{})
-					for i := 0; i < length; i++ {
-						k := columns[i]
-						v := *(data[i]).(*interface{})
-						result[k] = v
-					}
-					for key, value := range result {
-						vType := reflect.TypeOf(value)
-						switch vType.String() {
-						case "[]uint8":
-							v := string(value.([]uint8))
-							result[key] = v
-						default:
-							log.Logger.Info("type = ", vType.String())
-						}
-					}
-					result2, err := json.Marshal(result)
+				err = models.DB.Transaction(func(tx *gorm.DB) error {
+					now := time.Now()
+					sql := fmt.Sprintf("SELECT %s FROM %s where %s > '%s' and %s <= '%s'", table.Fields, table.Name, table.UpdateTimeField, table.LastUpdateTime, table.UpdateTimeField, now)
+					log.Logger.Info(sql)
+					rows, err := conn.Raw(sql).Rows()
 					if err != nil {
-						log.Logger.Error(err)
-						continue
+						return err
 					}
-					primaryValue := result[table.PrimaryKey].(string)
-					content := string(result2)
-					// 检查文档是否已存在
-					doc2, err := models.GetDataSourceDocument(table.UID, primaryValue)
-					if err == nil {
-						// 已存在，要更新文档，删除索引，并重建索引
-						err = models.DB.Transaction(func(tx *gorm.DB) error {
+					columns, err := rows.Columns()
+					if err != nil {
+						return err
+					}
+					length := len(columns)
+					if err = tx.Model(&models.DataSourceTable{}).Where("uid = ?", table.UID).Update("last_update_time", now).Error; err != nil {
+						return err
+					}
+					for rows.Next() {
+						data := makeResultReceiver(length)
+						if err = rows.Scan(data...); err != nil {
+							log.Logger.Error(err)
+							return err
+						}
+						result := make(map[string]interface{})
+						for i := 0; i < length; i++ {
+							k := columns[i]
+							v := *(data[i]).(*interface{})
+							result[k] = v
+						}
+						for key, value := range result {
+							vType := reflect.TypeOf(value)
+							switch vType.String() {
+							case "[]uint8":
+								v := string(value.([]uint8))
+								result[key] = v
+							default:
+								log.Logger.Info("type = ", vType.String())
+							}
+						}
+						result2, err := json.Marshal(result)
+						if err != nil {
+							return err
+						}
+						primaryValue := result[table.PrimaryKey].(string)
+						content := string(result2)
+						// 检查文档是否已存在
+						var doc2 models.DataSourceDocument
+						err = tx.First(&doc2, "data_source_table_id = ? and primary_value = ?", table.UID, primaryValue).Error
+						//doc2, err := models.GetDataSourceDocument(table.UID, primaryValue)
+						if err == nil {
+							// 已存在，要更新文档，删除索引，并重建索引
 							if err := tx.Model(&models.Document{}).Where("uid = ? and status = ?", doc2.DocumentID, true).Update("content", content).Error; err != nil {
 								return err
 							}
@@ -122,28 +124,24 @@ func Timer() {
 									}
 								}
 							}
+							log.Logger.Info("return nil")
 							return nil
-						})
-
-						continue
-					}
-					if err != gorm.ErrRecordNotFound {
-						log.Logger.Error(err)
-						continue
-					}
-					// 文档不存在，创建文档和索引
-					err = models.DB.Transaction(func(tx *gorm.DB) error {
+						}
+						if err != gorm.ErrRecordNotFound {
+							return err
+						}
+						// 文档不存在，创建文档和索引
 						doc := models.Document{
 							DbID:    db.UID,
 							Content: content,
+							Format:  config.FormatJson,
 						}
-						err := tx.Create(&doc).Error
-						if err != nil {
+						if err = tx.Create(&doc).Error; err != nil {
 							return err
 						}
-
 						for key, value := range result {
 							if key == table.PrimaryKey {
+								// 主键不参与分词
 								continue
 							}
 							words := index.SplitWord(value.(string))
@@ -161,21 +159,19 @@ func Timer() {
 								}
 							}
 						}
-
-						doc2 := models.DataSourceDocument{
+						doc3 := models.DataSourceDocument{
 							DataSourceTableID: table.UID,
 							PrimaryValue:      primaryValue,
 							DocumentID:        doc.UID,
 						}
-						if err := tx.Create(&doc2).Error; err != nil {
+						if err := tx.Create(&doc3).Error; err != nil {
 							return err
 						}
-						return nil
-					})
-					if err != nil {
-						log.Logger.Error(err)
-						continue
 					}
+					return nil
+				})
+				if err != nil {
+					log.Logger.Error(err)
 				}
 			}
 		}

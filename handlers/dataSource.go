@@ -52,11 +52,12 @@ func (param *DataSourceDBCreateParam) Load(request *http.Request) error {
 
 // DataSourceTableCreateParam 创建数据源表参数
 type DataSourceTableCreateParam struct {
-	DataSourceDBID string
-	Name           string   // table name
-	Fields         []string // 需要进行搜索的字段
-	PrimaryKey     string   // 主键字段
-	IndexDBID      string   // 索引所在的库
+	DataSourceDBID  string
+	Name            string   // table name
+	Fields          []string // 需要进行搜索的字段
+	PrimaryKey      string   // 主键字段
+	IndexDBID       string   // 索引所在的库
+	UpdateTimeField string
 }
 
 // Validate 参数验证
@@ -75,6 +76,9 @@ func (param *DataSourceTableCreateParam) Validate() (bool, error) {
 	}
 	if param.IndexDBID == "" {
 		return false, errors.New("indexDBID should not be null")
+	}
+	if param.UpdateTimeField == "" {
+		return false, errors.New("updateTimeField should not be null")
 	}
 	return true, nil
 }
@@ -160,7 +164,7 @@ func DataSourceTableCreateHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error("table already exists")
 		return coco.ErrorResponse(100)
 	}
-	table, err := models.NewDataSourceTable(param.DataSourceDBID, param.Name, param.Fields, param.PrimaryKey, param.IndexDBID)
+	table, err := models.NewDataSourceTable(param.DataSourceDBID, param.Name, param.Fields, param.PrimaryKey, param.IndexDBID, param.UpdateTimeField)
 	if err != nil {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)

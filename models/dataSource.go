@@ -2,6 +2,7 @@ package models
 
 import (
 	"strings"
+	"time"
 )
 
 // DataSourceDB 数据源，目前仅支持 MySQL
@@ -18,14 +19,16 @@ type DataSourceDB struct {
 // DataSourceTable 数据源的表
 type DataSourceTable struct {
 	BaseModel
-	DataSourceDBID string `json:"dataSourceDBID"`
-	Name           string `json:"name"`
-	Fields         string `json:"fields"`
-	PrimaryKey     string `json:"primaryKey"`
-	IndexDBID      string `json:"indexDBID"`
+	DataSourceDBID  string    `json:"dataSourceDBID"`
+	Name            string    `json:"name"`
+	Fields          string    `json:"fields"`
+	PrimaryKey      string    `json:"primaryKey"`
+	IndexDBID       string    `json:"indexDBID"`
+	UpdateTimeField string    `json:"updateTimeField"`
+	LastUpdateTime  time.Time `json:"lastUpdateTime"`
 }
 
-// DataSourceDocument 数据源导入的文档
+// DataSourceDocument 数据源表与 document 的关系
 type DataSourceDocument struct {
 	BaseModel
 	DataSourceTableID string `json:"dataSourceTableID"`
@@ -68,14 +71,15 @@ func ListDataSourceDB() ([]DataSourceDB, error) {
 }
 
 // NewDataSourceTable 新建数据源的表
-func NewDataSourceTable(dataSourceDBID string, name string, fields []string, primaryKey string, indexDBID string) (*DataSourceTable, error) {
+func NewDataSourceTable(dataSourceDBID string, name string, fields []string, primaryKey string, indexDBID string, updateTimeField string) (*DataSourceTable, error) {
 	fieldsStr := strings.Join(fields, ",")
 	table := DataSourceTable{
-		DataSourceDBID: dataSourceDBID,
-		Name:           name,
-		Fields:         fieldsStr,
-		PrimaryKey:     primaryKey,
-		IndexDBID:      indexDBID,
+		DataSourceDBID:  dataSourceDBID,
+		Name:            name,
+		Fields:          fieldsStr,
+		PrimaryKey:      primaryKey,
+		IndexDBID:       indexDBID,
+		UpdateTimeField: updateTimeField,
 	}
 	if err := DB.Create(&table).Error; err != nil {
 		return nil, err
