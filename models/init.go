@@ -57,6 +57,12 @@ func InitDB() {
 	if !DB.HasTable(Database{}) {
 		DB.CreateTable(Database{})
 	}
+	if !DB.HasTable(Table{}) {
+		DB.CreateTable(Table{})
+	}
+	if !DB.HasTable(Field{}) {
+		DB.CreateTable(Field{})
+	}
 	if !DB.HasTable(Document{}) {
 		DB.CreateTable(Document{})
 	}
@@ -65,15 +71,6 @@ func InitDB() {
 	}
 	if !DB.HasTable(DataSourceDB{}) {
 		DB.CreateTable(DataSourceDB{})
-	}
-	if !DB.HasTable(DataSourceTable{}) {
-		DB.CreateTable(DataSourceTable{})
-	}
-	if !DB.HasTable(DataSourceDocument{}) {
-		DB.CreateTable(DataSourceDocument{})
-	}
-	if !DB.HasTable(DataSourceField{}) {
-		DB.CreateTable(DataSourceField{})
 	}
 }
 

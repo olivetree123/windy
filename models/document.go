@@ -1,21 +1,23 @@
 package models
 
-import "windy/log"
+import (
+	"windy/log"
+)
 
 // Document 文档
 type Document struct {
 	BaseModel
-	DbID    string `json:"dbID"`    // 所属数据库
-	Content string `json:"content"` // 文档内容
-	Format  string `json:"format"`  // 文档格式，支持 string 和 json，默认为 string
+	TableID      string `json:"tableID"`
+	Content      string `json:"content"` // 文档内容
+	PrimaryValue string `json:"primaryValue"`
+	//Format  string `json:"format"`  // 文档格式，支持 string 和 json，默认为 string。v2：只需要支持 json
 }
 
 // NewDocument 新建文档
-func NewDocument(dbID string, content string, format string) (*Document, error) {
+func NewDocument(tableID string, content string) (*Document, error) {
 	doc := Document{
-		DbID:    dbID,
+		TableID: tableID,
 		Content: content,
-		Format:  format,
 	}
 	err := DB.Create(&doc).Error
 	if err != nil {
@@ -49,9 +51,11 @@ func ListDocument(dbID string) ([]Document, error) {
 }
 
 // SearchDocument 查找索引
-func SearchDocument(dbID string, words []string) ([]Document, error) {
+func SearchDocument(dbID string, tableID string, fields []string, words []string) ([]Document, error) {
 	var docs []string
-	rows, err := DB.Raw("select doc_id, count(1) as count1 from `index` where db_id = ? and status = ? and word in (?) group by doc_id order by count1 desc limit 10", dbID, true, words).Rows()
+	sql := "select doc_id, count(1) as count1 from `index` where db_id = ? and table_id = ? and status = ? and word in (?) and field_id in (?)  group by doc_id order by count1 desc limit 10"
+	rows, err := DB.Raw(sql, dbID, tableID, true, words, fields).Rows()
+	//rows, err := DB.Raw("select doc_id, count(1) as count1 from `index` where db_id = ? and status = ? and word in (?) group by doc_id order by count1 desc limit 10", dbID, true, words).Rows()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +69,7 @@ func SearchDocument(dbID string, words []string) ([]Document, error) {
 		docs = append(docs, docID)
 	}
 	var documents []Document
-	if err = DB.Where("uid in (?)", docs).Find(&documents).Error; err != nil {
+	if err = DB.Where("uid in (?) and status = ?", docs, true).Find(&documents).Error; err != nil {
 		return nil, err
 	}
 	var result []Document

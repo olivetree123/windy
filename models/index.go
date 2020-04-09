@@ -10,22 +10,26 @@ type Index struct {
 	BaseModel
 	Word     string `json:"word"`     // 词语
 	DbID     string `json:"dbID"`     // 所属数据库
+	TableID  string `json:"tableID"`  // 所属的表
 	DocID    string `json:"docID"`    // 所属文档
+	FieldID  string `json:"fieldID"`  // word 所属的字段
 	Count    int    `json:"count"`    // 出现的次数
 	Position string `json:"position"` // 出现的位置，多个位置组成的列表
 }
 
 // NewIndex 新建索引
-func NewIndex(dbID string, docID string, word string, position []int) (*Index, error) {
+func NewIndex(dbID string, tableID string, docID string, fieldID string, word string, position []int) (*Index, error) {
 	// var position2 []string
 	// for _, pos := range position {
 	// 	position2 = append(position2, strconv.Itoa(pos))
 	// }
 	index := Index{
-		Word:  word,
-		DbID:  dbID,
-		DocID: docID,
-		Count: 1,
+		Word:    word,
+		DbID:    dbID,
+		TableID: tableID,
+		DocID:   docID,
+		FieldID: fieldID,
+		Count:   1,
 		// Position: strings.Join(position2, ","),
 		Position: "",
 	}

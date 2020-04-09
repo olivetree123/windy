@@ -60,7 +60,7 @@ func Timer() {
 			continue
 		}
 		for _, db := range dbs {
-			tables, err := models.ListDataSourceTable(db.UID)
+			tables, err := models.ListTableByDataSourceDB(db.UID)
 			if err != nil {
 				log.Logger.Error(err)
 				continue
@@ -98,7 +98,7 @@ func Timer() {
 						return err
 					}
 					length := len(columns)
-					if err = tx.Model(&models.DataSourceTable{}).Where("uid = ? and status = ?", table.UID, true).Update("last_update_time", now).Error; err != nil {
+					if err = tx.Model(&models.Table{}).Where("uid = ? and status = ?", table.UID, true).Update("last_update_time", now).Error; err != nil {
 						return err
 					}
 					for rows.Next() {
@@ -132,21 +132,21 @@ func Timer() {
 						if err != nil {
 							return err
 						}
-						primaryValue := result[table.PrimaryKey].(string)
+						primaryValue := result[table.PrimaryField].(string)
 						content := string(result2)
 						// 检查文档是否已存在
-						var doc2 models.DataSourceDocument
-						err = tx.First(&doc2, "data_source_table_id = ? and primary_value = ?", table.UID, primaryValue).Error
+						var doc2 models.Document
+						err = tx.First(&doc2, "table_id = ? and primary_value = ?", table.UID, primaryValue).Error
 						if err == nil {
 							// 已存在，要更新文档，删除索引，并重建索引
-							if err := tx.Model(&models.Document{}).Where("uid = ? and status = ?", doc2.DocumentID, true).Update("content", content).Error; err != nil {
+							if err := tx.Model(&models.Document{}).Where("uid = ? and status = ?", doc2.UID, true).Update("content", content).Error; err != nil {
 								return err
 							}
-							if err := tx.Where("doc_id = ?", doc2.DocumentID).Delete(&models.Index{}).Error; err != nil {
+							if err := tx.Where("doc_id = ?", doc2.UID).Delete(&models.Index{}).Error; err != nil {
 								return err
 							}
 							for _, field := range fields {
-								if field.Name == table.PrimaryKey || field.Type != config.FieldTypeString || field.UnSearch {
+								if field.Name == table.PrimaryField || field.Type != config.FieldTypeString || field.UnSearch {
 									continue
 								}
 								value, found := result[field.Name]
@@ -156,10 +156,12 @@ func Timer() {
 								words := index.SplitWord(value.(string))
 								for _, word := range words {
 									idx := models.Index{
-										Word:  word.Content,
-										DbID:  table.IndexDBID,
-										DocID: doc2.DocumentID,
-										Count: word.Count,
+										Word:    word.Content,
+										DbID:    table.DbID,
+										TableID: table.UID,
+										DocID:   doc2.UID,
+										FieldID: field.UID,
+										Count:   word.Count,
 										// Position: strings.Join(position2, ","),
 										Position: "",
 									}
@@ -175,15 +177,15 @@ func Timer() {
 						}
 						// 文档不存在，创建文档和索引
 						doc := models.Document{
-							DbID:    db.UID,
-							Content: content,
-							Format:  config.FormatJson,
+							TableID:      table.UID,
+							Content:      content,
+							PrimaryValue: primaryValue,
 						}
 						if err = tx.Create(&doc).Error; err != nil {
 							return err
 						}
 						for _, field := range fields {
-							if field.Name == table.PrimaryKey || field.Type != config.FieldTypeString || field.UnSearch {
+							if field.Name == table.PrimaryField || field.Type != config.FieldTypeString || field.UnSearch {
 								continue
 							}
 							value, found := result[field.Name]
@@ -193,10 +195,12 @@ func Timer() {
 							words := index.SplitWord(value.(string))
 							for _, word := range words {
 								idx := models.Index{
-									Word:  word.Content,
-									DbID:  table.IndexDBID,
-									DocID: doc.UID,
-									Count: word.Count,
+									Word:    word.Content,
+									DbID:    table.DbID,
+									TableID: table.UID,
+									DocID:   doc.UID,
+									FieldID: field.UID,
+									Count:   word.Count,
 									// Position: strings.Join(position2, ","),
 									Position: "",
 								}
@@ -204,14 +208,6 @@ func Timer() {
 									return err
 								}
 							}
-						}
-						doc3 := models.DataSourceDocument{
-							DataSourceTableID: table.UID,
-							PrimaryValue:      primaryValue,
-							DocumentID:        doc.UID,
-						}
-						if err := tx.Create(&doc3).Error; err != nil {
-							return err
 						}
 					}
 					return nil

@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"windy/config"
 	"windy/entity"
 	"windy/index"
 	"windy/log"
@@ -17,7 +16,13 @@ import (
 type DocCreateParam struct {
 	DbID    string
 	Content string
-	Format  string
+}
+
+type DocSearchParam struct {
+	DbID    string
+	TableID string
+	Fields  []string
+	Query   string
 }
 
 // Validate 参数验证
@@ -27,9 +32,6 @@ func (param *DocCreateParam) Validate() (bool, error) {
 	}
 	if param.Content == "" {
 		return false, errors.New("content should not be null")
-	}
-	for param.Format != config.FormatString && param.Format != config.FormatJson {
-		return false, errors.New("invalid format, format should be string or json")
 	}
 	return true, nil
 }
@@ -41,8 +43,23 @@ func (param *DocCreateParam) Load(request *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if param.Format == "" {
-		param.Format = config.FormatString
+	return nil
+}
+
+// Validate 参数验证
+func (param *DocSearchParam) Validate() (bool, error) {
+	if param.DbID == "" {
+		return false, errors.New("db_id should not be null")
+	}
+	return true, nil
+}
+
+// Load 加载参数
+func (param *DocSearchParam) Load(request *http.Request) error {
+	decoder := json.NewDecoder(request.Body)
+	err := decoder.Decode(param)
+	if err != nil {
+		return err
 	}
 	return nil
 }
@@ -62,7 +79,7 @@ func DocCreateHandler(c *coco.Coco) coco.Result {
 	}
 	// TODO: 相同的内容是否允许重复写入？
 	// 这里需要用事务
-	doc, err := models.NewDocument(param.DbID, param.Content, param.Format)
+	doc, err := models.NewDocument(param.DbID, param.Content)
 	if err != nil {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
@@ -93,22 +110,50 @@ func DocListHandler(c *coco.Coco) coco.Result {
 
 // DocSearchHandler 搜索文档
 func DocSearchHandler(c *coco.Coco) coco.Result {
-	params := c.Request.URL.Query()
-	dbID := params.Get("dbID")
-	query := params.Get("query")
-	words := index.SplitWord(query)
+	var param DocSearchParam
+	param.Load(c.Request)
+	status, err := param.Validate()
+	if !status {
+		log.Logger.Error(err)
+		return coco.ErrorResponse(100)
+	}
+	//params := c.Request.URL.Query()
+	//dbID := params.Get("dbID")
+	//query := params.Get("query")
+	words := index.SplitWord(param.Query)
 	var ws []string
 	for _, word := range words {
 		ws = append(ws, word.Content)
 	}
-	documents, err := models.SearchDocument(dbID, ws)
+	var fields []string
+	for _, name := range param.Fields {
+		field, err := models.GetField(param.TableID, name)
+		if err != nil {
+			log.Logger.Error(err)
+			return coco.ErrorResponse(100)
+		}
+		fields = append(fields, field.UID)
+	}
+	if len(fields) == 0 {
+		fs, err := models.ListField(param.TableID)
+		if err != nil {
+			log.Logger.Error(err)
+			return coco.ErrorResponse(100)
+		}
+		for _, field := range fs {
+			fields = append(fields, field.UID)
+		}
+	}
+	log.Logger.Info("fields = ", fields)
+	log.Logger.Info("words = ", ws)
+	documents, err := models.SearchDocument(param.DbID, param.TableID, fields, ws)
 	if err != nil {
 		log.Logger.Info(err)
 		return coco.ErrorResponse(100)
 	}
 	var result []*entity.DocumentEntity
 	for _, doc := range documents {
-		r, err := entity.NewDocumentEntity(doc.UID, doc.Content, doc.Format, doc.CreatedAt, doc.UpdatedAt)
+		r, err := entity.NewDocumentEntity(doc.UID, doc.Content, doc.CreatedAt, doc.UpdatedAt)
 		if err != nil {
 			log.Logger.Info(err)
 			return coco.ErrorResponse(100)
