@@ -1,7 +1,7 @@
 package index
 
 import (
-	"github.com/huichen/sego"
+	"github.com/olivetree123/sego"
 )
 
 // MatchDoc 匹配的文档
@@ -35,7 +35,7 @@ var wordsFreq map[string]int
 func init() {
 	wordsFreq = make(map[string]int, 590000)
 	DataMap = make(map[string]*Index)
-	seg.LoadDictionary("/Users/gao/code/gowork/src/github.com/huichen/sego/data/dictionary.txt")
+	seg.LoadDictionary("/etc/sego/dictionary.txt")
 	for _, token := range seg.Dictionary().GetTokens() {
 		wordsFreq[token.Text()] = token.Frequency()
 	}
