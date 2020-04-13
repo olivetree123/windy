@@ -91,3 +91,36 @@ func CreateIndexForWords(dbID string, docID string, words []index.Word) error {
 	return err
 
 }
+
+// GetAllMatchDoc 获取所有匹配的文档
+func GetAllMatchDoc(dbID string, tableID string, words []string, fields []string) ([]string, error) {
+	var docs []string
+	sql := "select doc_id, count(1) as count1 from `index` where db_id = ? and table_id = ? and status = ? and word in (?) and field_id in (?)  group by doc_id"
+	rows, err := DB.Raw(sql, dbID, tableID, true, words, fields).Rows()
+	if err != nil {
+		return nil, err
+	}
+	for rows.Next() {
+		var docID string
+		var count int
+		if err = rows.Scan(&docID, &count); err != nil {
+			return nil, err
+		}
+		docs = append(docs, docID)
+	}
+	return docs, nil
+}
+
+// GetScore 给文档的匹配度打分
+func GetScore(documentID string, words []string, fields []string) (float32, error) {
+	var indexes []Index
+	if err := DB.Find(&indexes, "doc_id = ? and word in (?) and field_id in (?)", documentID, words, fields).Error; err != nil {
+		return 0, err
+	}
+	var scoreFinal float32
+	for _, idx := range indexes {
+		score := float32(idx.Count) / float32(index.GetWordFreq(idx.Word))
+		scoreFinal += score
+	}
+	return scoreFinal, nil
+}

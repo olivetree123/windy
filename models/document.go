@@ -1,7 +1,8 @@
 package models
 
 import (
-	"windy/log"
+	"sort"
+	"windy/entity"
 )
 
 // Document 文档
@@ -52,28 +53,36 @@ func ListDocument(dbID string) ([]Document, error) {
 
 // SearchDocument 查找索引
 func SearchDocument(dbID string, tableID string, fields []string, words []string) ([]Document, error) {
-	var docs []string
-	sql := "select doc_id, count(1) as count1 from `index` where db_id = ? and table_id = ? and status = ? and word in (?) and field_id in (?)  group by doc_id order by count1 desc limit 10"
-	rows, err := DB.Raw(sql, dbID, tableID, true, words, fields).Rows()
-	//rows, err := DB.Raw("select doc_id, count(1) as count1 from `index` where db_id = ? and status = ? and word in (?) group by doc_id order by count1 desc limit 10", dbID, true, words).Rows()
+	// 1. 根据布尔模型，过滤出所有匹配到的文档
+	docs, err := GetAllMatchDoc(dbID, tableID, words, fields)
 	if err != nil {
 		return nil, err
 	}
-	for rows.Next() {
-		var docID string
-		var count int
-		if err = rows.Scan(&docID, &count); err != nil {
+	// 2. 根据TF-IDF 模型，为每个匹配到的文档打分
+	// 打分规则：单词在文档中出现的次数除以该词的词频
+	var ss []entity.DocumentScore
+	for _, docID := range docs {
+		score, err := GetScore(docID, words, fields)
+		if err != nil {
 			return nil, err
 		}
-		log.Logger.Info(docID, "\t", count)
-		docs = append(docs, docID)
+		ss = append(ss, *entity.NewDocumentScore(docID, score))
 	}
+	// 3. 对打分结果进行排序，并取前十名
+	sort.Slice(ss, func(i, j int) bool {
+		return ss[i].Score > ss[j].Score
+	})
+	var rs []string
+	for _, s := range ss[:10] {
+		rs = append(rs, s.DocID)
+	}
+	// 4. 获取结果
 	var documents []Document
-	if err = DB.Where("uid in (?) and status = ?", docs, true).Find(&documents).Error; err != nil {
+	if err = DB.Where("uid in (?) and status = ?", rs, true).Find(&documents).Error; err != nil {
 		return nil, err
 	}
 	var result []Document
-	for _, docID := range docs {
+	for _, docID := range rs {
 		for _, document := range documents {
 			if document.UID == docID {
 				result = append(result, document)

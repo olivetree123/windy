@@ -117,9 +117,6 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
-	//params := c.Request.URL.Query()
-	//dbID := params.Get("dbID")
-	//query := params.Get("query")
 	words := index.SplitWord(param.Query)
 	var ws []string
 	for _, word := range words {
@@ -144,8 +141,6 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 			fields = append(fields, field.UID)
 		}
 	}
-	log.Logger.Info("fields = ", fields)
-	log.Logger.Info("words = ", ws)
 	documents, err := models.SearchDocument(param.DbID, param.TableID, fields, ws)
 	if err != nil {
 		log.Logger.Info(err)
