@@ -23,6 +23,7 @@ type DocSearchParam struct {
 	TableID string
 	Fields  []string
 	Query   string
+	Match   map[string]string
 }
 
 // Validate 参数验证
@@ -56,6 +57,7 @@ func (param *DocSearchParam) Validate() (bool, error) {
 
 // Load 加载参数
 func (param *DocSearchParam) Load(request *http.Request) error {
+	param.Match = make(map[string]string)
 	decoder := json.NewDecoder(request.Body)
 	err := decoder.Decode(param)
 	if err != nil {
@@ -120,7 +122,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 	words := index.SplitWord(param.Query)
 	var ws []string
 	for _, word := range words {
-		ws = append(ws, word.Content)
+		ws = append(ws, word.Value)
 	}
 	var fields []string
 	for _, name := range param.Fields {
@@ -141,7 +143,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 			fields = append(fields, field.UID)
 		}
 	}
-	documents, err := models.SearchDocument(param.DbID, param.TableID, fields, ws)
+	documents, err := models.SearchDocument(param.DbID, param.TableID, fields, ws, param.Match)
 	if err != nil {
 		log.Logger.Info(err)
 		return coco.ErrorResponse(100)

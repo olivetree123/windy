@@ -19,9 +19,8 @@ type Index struct {
 }
 
 type Word struct {
-	Content string
-	Count   int
-	Freq    int
+	Value string
+	Count int
 }
 
 // DataMap 数据字典，用户将索引数据全部加载到内存
@@ -31,6 +30,14 @@ var seg sego.Segmenter
 
 // wordsFreq 记录每个词的词频
 var wordsFreq map[string]int
+
+func NewWord(value string, count int) Word {
+	word := Word{
+		Value: value,
+		Count: count,
+	}
+	return word
+}
 
 func init() {
 	wordsFreq = make(map[string]int, 590000)
@@ -49,18 +56,14 @@ func SplitWord(sentence string) []Word {
 	for _, r := range segments {
 		var found bool
 		for _, word := range words {
-			if word.Content == r.Token().Text() {
+			if word.Value == r.Token().Text() {
 				word.Count++
 				found = true
 				break
 			}
 		}
 		if !found {
-			word := Word{
-				Content: r.Token().Text(),
-				Count:   1,
-				Freq:    r.Token().Frequency(),
-			}
+			word := NewWord(r.Token().Text(), 1)
 			words = append(words, word)
 		}
 	}

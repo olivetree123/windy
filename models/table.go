@@ -12,7 +12,7 @@ type Table struct {
 	LastUpdateTime  time.Time `json:"lastUpdateTime"`
 }
 
-// Fields 获取 DataSourceTable 的所有字段
+// Fields 获取 Table 的所有列
 func (table *Table) Fields() ([]Field, error) {
 	var fields []Field
 	if err := DB.Find(&fields, "table_id = ? and status = ?", table.UID, true).Error; err != nil {

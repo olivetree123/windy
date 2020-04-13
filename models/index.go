@@ -76,7 +76,7 @@ func CreateIndexForWords(dbID string, docID string, words []index.Word) error {
 				return err
 			}
 			idx = Index{
-				Word:     word.Content,
+				Word:     word.Value,
 				DbID:     dbID,
 				DocID:    docID,
 				Count:    word.Count,
@@ -93,22 +93,40 @@ func CreateIndexForWords(dbID string, docID string, words []index.Word) error {
 }
 
 // GetAllMatchDoc 获取所有匹配的文档
-func GetAllMatchDoc(dbID string, tableID string, words []string, fields []string) ([]string, error) {
+func GetAllMatchDoc(dbID string, tableID string, words []string, fields []string, match map[string]string) ([]string, error) {
 	var docs []string
-	sql := "select doc_id, count(1) as count1 from `index` where db_id = ? and table_id = ? and status = ? and word in (?) and field_id in (?)  group by doc_id"
+	sql := "select doc_id from `index` where db_id = ? and table_id = ? and status = ? and word in (?) and field_id in (?) group by doc_id"
 	rows, err := DB.Raw(sql, dbID, tableID, true, words, fields).Rows()
 	if err != nil {
 		return nil, err
 	}
 	for rows.Next() {
 		var docID string
-		var count int
-		if err = rows.Scan(&docID, &count); err != nil {
+		if err = rows.Scan(&docID); err != nil {
 			return nil, err
 		}
 		docs = append(docs, docID)
 	}
-	return docs, nil
+	// 匹配 match 条件
+	var docs2 []string
+	for _, docID := range docs {
+		ok := true
+		for key, value := range match {
+			var idx Index
+			if err = DB.Find(&idx, "doc_id = ? and field_id = ? and word = ?", docID, key, value).Error; err != nil {
+				if err == gorm.ErrRecordNotFound {
+					ok = false
+					break
+				} else {
+					return nil, err
+				}
+			}
+		}
+		if ok {
+			docs2 = append(docs2, docID)
+		}
+	}
+	return docs2, nil
 }
 
 // GetScore 给文档的匹配度打分

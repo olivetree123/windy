@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/olivetree123/coco"
 	"windy/handlers"
+	"windy/log"
 	"windy/timer"
 )
 
@@ -20,5 +21,7 @@ func main() {
 	c.AddRouter("GET", "/windy/datasource/db/list", handlers.DataSourceDBListHandler)
 	//c.AddRouter("POST", "/windy/datasource/table/create", handlers.DataSourceTableCreateHandler)
 	//c.AddRouter("GET", "/windy/datasource/table/list", handlers.DataSourceTableListHandler)
-	c.Run("0.0.0.0", 5000)
+	if err := c.Run("0.0.0.0", 5566); err != nil {
+		log.Logger.Error(err)
+	}
 }

@@ -34,7 +34,12 @@ func parseResultToMap(columns []string, data []interface{}) map[string]interface
 		v := *(data[i]).(*interface{})
 		result[k] = v
 	}
+	//log.Logger.Info("result = ", result)
 	for key, value := range result {
+		if value == nil {
+			result[key] = nil
+			continue
+		}
 		vType := reflect.TypeOf(value)
 		switch vType.String() {
 		case "[]uint8":
@@ -88,7 +93,7 @@ func Timer() {
 				err = models.DB.Transaction(func(tx *gorm.DB) error {
 					now := time.Now()
 					sql := fmt.Sprintf("SELECT %s FROM %s where %s > '%s' and %s <= '%s'", fieldsStr, table.Name, table.UpdateTimeField, table.LastUpdateTime, table.UpdateTimeField, now)
-					//log.Logger.Info(sql)
+					log.Logger.Info(sql)
 					rows, err := conn.Raw(sql).Rows()
 					if err != nil {
 						return err
@@ -97,6 +102,7 @@ func Timer() {
 					if err != nil {
 						return err
 					}
+					//log.Logger.Info("columns = ", columns)
 					length := len(columns)
 					if err = tx.Model(&models.Table{}).Where("uid = ? and status = ?", table.UID, true).Update("last_update_time", now).Error; err != nil {
 						return err
@@ -107,12 +113,16 @@ func Timer() {
 							log.Logger.Error(err)
 							return err
 						}
+						//log.Logger.Info("data = ", data)
 						result := parseResultToMap(columns, data)
 						// 考虑各个字段的类型
 						for _, field := range fields {
 							name := field.Name
 							value, found := result[field.Name]
 							if !found {
+								continue
+							}
+							if value == nil {
 								continue
 							}
 							if field.Type == config.FieldTypeInt {
@@ -153,10 +163,13 @@ func Timer() {
 								if !found {
 									continue
 								}
+								if value == nil {
+									continue
+								}
 								words := index.SplitWord(value.(string))
 								for _, word := range words {
 									idx := models.Index{
-										Word:    word.Content,
+										Word:    word.Value,
 										DbID:    table.DbID,
 										TableID: table.UID,
 										DocID:   doc2.UID,
@@ -185,17 +198,26 @@ func Timer() {
 							return err
 						}
 						for _, field := range fields {
-							if field.Name == table.PrimaryField || field.Type != config.FieldTypeString || field.UnSearch {
+							if field.Name == table.PrimaryField || field.Type != config.FieldTypeString {
 								continue
 							}
 							value, found := result[field.Name]
 							if !found {
 								continue
 							}
-							words := index.SplitWord(value.(string))
+							if value == nil {
+								continue
+							}
+							var words []index.Word
+							if field.UnSearch {
+								// 不参与全文检索的字段，可以进行完全匹配的检索
+								words = append(words, index.NewWord(value.(string), 1))
+							} else {
+								words = index.SplitWord(value.(string))
+							}
 							for _, word := range words {
 								idx := models.Index{
-									Word:    word.Content,
+									Word:    word.Value,
 									DbID:    table.DbID,
 									TableID: table.UID,
 									DocID:   doc.UID,

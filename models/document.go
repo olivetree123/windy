@@ -52,9 +52,17 @@ func ListDocument(dbID string) ([]Document, error) {
 }
 
 // SearchDocument 查找索引
-func SearchDocument(dbID string, tableID string, fields []string, words []string) ([]Document, error) {
+func SearchDocument(dbID string, tableID string, fields []string, words []string, match map[string]string) ([]Document, error) {
+	match2 := make(map[string]string)
+	for key, value := range match {
+		field, err := GetField(tableID, key)
+		if err != nil {
+			return nil, err
+		}
+		match2[field.UID] = value
+	}
 	// 1. 根据布尔模型，过滤出所有匹配到的文档
-	docs, err := GetAllMatchDoc(dbID, tableID, words, fields)
+	docs, err := GetAllMatchDoc(dbID, tableID, words, fields, match2)
 	if err != nil {
 		return nil, err
 	}
@@ -72,8 +80,12 @@ func SearchDocument(dbID string, tableID string, fields []string, words []string
 	sort.Slice(ss, func(i, j int) bool {
 		return ss[i].Score > ss[j].Score
 	})
+	length := 10
+	if length > len(ss) {
+		length = len(ss)
+	}
 	var rs []string
-	for _, s := range ss[:10] {
+	for _, s := range ss[:length] {
 		rs = append(rs, s.DocID)
 	}
 	// 4. 获取结果
