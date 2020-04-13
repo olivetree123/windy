@@ -93,10 +93,10 @@ func CreateIndexForWords(dbID string, docID string, words []index.Word) error {
 }
 
 // GetAllMatchDoc 获取所有匹配的文档
-func GetAllMatchDoc(dbID string, tableID string, words []string, fields []string, match map[string]string) ([]string, error) {
+func GetAllMatchDoc(tableID string, words []string, fields []string, match map[string]string) ([]string, error) {
 	var docs []string
-	sql := "select doc_id from `index` where db_id = ? and table_id = ? and status = ? and word in (?) and field_id in (?) group by doc_id"
-	rows, err := DB.Raw(sql, dbID, tableID, true, words, fields).Rows()
+	sql := "select doc_id from `index` where table_id = ? and status = ? and word in (?) and field_id in (?) group by doc_id"
+	rows, err := DB.Raw(sql, tableID, true, words, fields).Rows()
 	if err != nil {
 		return nil, err
 	}

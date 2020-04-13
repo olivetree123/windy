@@ -19,11 +19,13 @@ type DocCreateParam struct {
 }
 
 type DocSearchParam struct {
-	DbID    string
-	TableID string
-	Fields  []string
-	Query   string
-	Match   map[string]string
+	//DbID    string
+	//TableID string
+	DB     string
+	Table  string
+	Fields []string
+	Query  string
+	Match  map[string]string
 }
 
 // Validate 参数验证
@@ -49,8 +51,8 @@ func (param *DocCreateParam) Load(request *http.Request) error {
 
 // Validate 参数验证
 func (param *DocSearchParam) Validate() (bool, error) {
-	if param.DbID == "" {
-		return false, errors.New("db_id should not be null")
+	if param.DB == "" {
+		return false, errors.New("db should not be null")
 	}
 	return true, nil
 }
@@ -119,6 +121,16 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
+	db, err := models.GetDatabaseByName(param.DB)
+	if err != nil {
+		log.Logger.Error(err)
+		return coco.ErrorResponse(100)
+	}
+	table, err := models.GetTableByName(db.UID, param.Table)
+	if err != nil {
+		log.Logger.Error(err)
+		return coco.ErrorResponse(100)
+	}
 	words := index.SplitWord(param.Query)
 	var ws []string
 	for _, word := range words {
@@ -126,7 +138,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 	}
 	var fields []string
 	for _, name := range param.Fields {
-		field, err := models.GetField(param.TableID, name)
+		field, err := models.GetField(table.UID, name)
 		if err != nil {
 			log.Logger.Error(err)
 			return coco.ErrorResponse(100)
@@ -134,7 +146,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 		fields = append(fields, field.UID)
 	}
 	if len(fields) == 0 {
-		fs, err := models.ListField(param.TableID)
+		fs, err := models.ListField(table.UID)
 		if err != nil {
 			log.Logger.Error(err)
 			return coco.ErrorResponse(100)
@@ -143,7 +155,7 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 			fields = append(fields, field.UID)
 		}
 	}
-	documents, err := models.SearchDocument(param.DbID, param.TableID, fields, ws, param.Match)
+	documents, err := models.SearchDocument(table.UID, fields, ws, param.Match)
 	if err != nil {
 		log.Logger.Info(err)
 		return coco.ErrorResponse(100)

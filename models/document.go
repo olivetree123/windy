@@ -52,7 +52,7 @@ func ListDocument(dbID string) ([]Document, error) {
 }
 
 // SearchDocument 查找索引
-func SearchDocument(dbID string, tableID string, fields []string, words []string, match map[string]string) ([]Document, error) {
+func SearchDocument(tableID string, fields []string, words []string, match map[string]string) ([]Document, error) {
 	match2 := make(map[string]string)
 	for key, value := range match {
 		field, err := GetField(tableID, key)
@@ -62,7 +62,7 @@ func SearchDocument(dbID string, tableID string, fields []string, words []string
 		match2[field.UID] = value
 	}
 	// 1. 根据布尔模型，过滤出所有匹配到的文档
-	docs, err := GetAllMatchDoc(dbID, tableID, words, fields, match2)
+	docs, err := GetAllMatchDoc(tableID, words, fields, match2)
 	if err != nil {
 		return nil, err
 	}

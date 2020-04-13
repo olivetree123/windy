@@ -27,6 +27,14 @@ func GetDatabase(uid string) (*Database, error) {
 	return &database, nil
 }
 
+func GetDatabaseByName(name string) (*Database, error) {
+	var database Database
+	if err := DB.First(&database, "name = ? and status = ?", name, true).Error; err != nil {
+		return nil, err
+	}
+	return &database, nil
+}
+
 // ListDatabase 数据库列表
 func ListDatabase() ([]Database, error) {
 	var dbs []Database

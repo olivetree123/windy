@@ -44,3 +44,11 @@ func GetTable(tableID string) (*Table, error) {
 	}
 	return &table, nil
 }
+
+func GetTableByName(dbID string, name string) (*Table, error) {
+	var table Table
+	if err := DB.First(&table, "db_id = ? and name = ? and status = ?", dbID, name, true).Error; err != nil {
+		return nil, err
+	}
+	return &table, nil
+}
