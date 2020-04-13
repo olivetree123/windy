@@ -35,7 +35,7 @@ var wordsFreq map[string]int
 func init() {
 	wordsFreq = make(map[string]int, 590000)
 	DataMap = make(map[string]*Index)
-	seg.LoadDictionary("/etc/sego/dictionary.txt")
+	seg.LoadDictionary("/var/lib/windy/dictionary.txt")
 	for _, token := range seg.Dictionary().GetTokens() {
 		wordsFreq[token.Text()] = token.Frequency()
 	}

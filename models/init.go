@@ -15,7 +15,7 @@ import (
 var DB *gorm.DB
 
 // DBDir 数据库文件位置
-var DBDir = "/Users/gao/windy/"
+var DBDir = "/var/lib/windy/"
 
 // BaseModel 基础模型
 type BaseModel struct {
