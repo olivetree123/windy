@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
+	"windy/utils"
 
 	"github.com/jinzhu/gorm"
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
-	"github.com/twinj/uuid"
 )
 
 // DB 数据库连接对象
@@ -28,7 +27,7 @@ type BaseModel struct {
 
 // BeforeCreate 写前处理
 func (model *BaseModel) BeforeCreate(scope *gorm.Scope) error {
-	scope.SetColumn("UID", strings.ReplaceAll(uuid.NewV4().String(), "-", ""))
+	scope.SetColumn("UID", utils.NewUUID())
 	return nil
 }
 
