@@ -21,11 +21,13 @@ type DocCreateParam struct {
 type DocSearchParam struct {
 	//DbID    string
 	//TableID string
-	DB     string
-	Table  string
-	Fields []string
-	Query  string
-	Match  map[string]string
+	DB       string
+	Table    string
+	Fields   []string
+	Query    string
+	Match    map[string]string
+	Page     int
+	PageSize int
 }
 
 // Validate 参数验证
@@ -64,6 +66,12 @@ func (param *DocSearchParam) Load(request *http.Request) error {
 	err := decoder.Decode(param)
 	if err != nil {
 		return err
+	}
+	if param.Page == 0 {
+		param.Page = 1
+	}
+	if param.PageSize == 0 {
+		param.PageSize = 10
 	}
 	return nil
 }
@@ -155,19 +163,20 @@ func DocSearchHandler(c *coco.Coco) coco.Result {
 			fields = append(fields, field.UID)
 		}
 	}
-	documents, err := models.SearchDocument(table.UID, fields, ws, param.Match)
+	documents, total, err := models.SearchDocument(table.UID, fields, ws, param.Match, param.Page, param.PageSize)
 	if err != nil {
 		log.Logger.Info(err)
 		return coco.ErrorResponse(100)
 	}
-	var result []*entity.DocumentEntity
+	var data []*entity.DocumentEntity
 	for _, doc := range documents {
 		r, err := entity.NewDocumentEntity(doc.UID, doc.Content, doc.CreatedAt, doc.UpdatedAt)
 		if err != nil {
 			log.Logger.Info(err)
 			return coco.ErrorResponse(100)
 		}
-		result = append(result, r)
+		data = append(data, r)
 	}
+	result := entity.NewSearchResult(data, param.Page, param.PageSize, total)
 	return coco.APIResponse(result)
 }

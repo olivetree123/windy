@@ -51,21 +51,19 @@ func init() {
 // SplitWord 分词
 func SplitWord(sentence string) []Word {
 	var words []Word
+	data := make(map[string]int)
 	segments := seg.Segment([]byte(sentence))
-	//rs := sego.SegmentsToSlice(segments, true)
-	for _, r := range segments {
-		var found bool
-		for _, word := range words {
-			if word.Value == r.Token().Text() {
-				word.Count++
-				found = true
-				break
-			}
+	ws := sego.SegmentsToSlice(segments, true)
+	for _, w := range ws {
+		if _, found := data[w]; found {
+			data[w]++
+		} else {
+			data[w] = 1
 		}
-		if !found {
-			word := NewWord(r.Token().Text(), 1)
-			words = append(words, word)
-		}
+	}
+	for key, value := range data {
+		word := NewWord(key, value)
+		words = append(words, word)
 	}
 	return words
 }

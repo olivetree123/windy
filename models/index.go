@@ -64,7 +64,7 @@ func CreateIndexForWords(dbID string, docID string, words []index.Word) error {
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		for _, word := range words {
 			var idx Index
-			err := tx.First(&idx, "db_id = ? and doc_id = ? and word = ? and status = ?", dbID, docID, word, true).Error
+			err := tx.First(&idx, "db_id = ? and doc_id = ? and word = ? and status = ?", dbID, docID, word.Value, true).Error
 			if err == nil {
 				idx.Count++
 				if err = tx.Save(&idx).Error; err != nil {

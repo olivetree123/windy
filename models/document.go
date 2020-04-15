@@ -1,6 +1,7 @@
 package models
 
 import (
+	"errors"
 	"sort"
 	"windy/entity"
 )
@@ -52,19 +53,23 @@ func ListDocument(dbID string) ([]Document, error) {
 }
 
 // SearchDocument 查找索引
-func SearchDocument(tableID string, fields []string, words []string, match map[string]string) ([]Document, error) {
+func SearchDocument(tableID string, fields []string, words []string, match map[string]string, page int, pageSize int) ([]Document, int, error) {
 	match2 := make(map[string]string)
 	for key, value := range match {
 		field, err := GetField(tableID, key)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		match2[field.UID] = value
 	}
 	// 1. 根据布尔模型，过滤出所有匹配到的文档
 	docs, err := GetAllMatchDoc(tableID, words, fields, match2)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
+	}
+	total := len(docs)
+	if (page-1)*pageSize >= total {
+		return nil, 0, errors.New("invalid page")
 	}
 	// 2. 根据TF-IDF 模型，为每个匹配到的文档打分
 	// 打分规则：单词在文档中出现的次数除以该词的词频
@@ -72,7 +77,7 @@ func SearchDocument(tableID string, fields []string, words []string, match map[s
 	for _, docID := range docs {
 		score, err := GetScore(docID, words, fields)
 		if err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 		ss = append(ss, *entity.NewDocumentScore(docID, score))
 	}
@@ -80,18 +85,19 @@ func SearchDocument(tableID string, fields []string, words []string, match map[s
 	sort.Slice(ss, func(i, j int) bool {
 		return ss[i].Score > ss[j].Score
 	})
-	length := 10
-	if length > len(ss) {
-		length = len(ss)
+	startPoint := (page - 1) * pageSize
+	endPoint := page * pageSize
+	if endPoint > len(ss) {
+		endPoint = len(ss)
 	}
 	var rs []string
-	for _, s := range ss[:length] {
+	for _, s := range ss[startPoint:endPoint] {
 		rs = append(rs, s.DocID)
 	}
 	// 4. 获取结果
 	var documents []Document
 	if err = DB.Where("uid in (?) and status = ?", rs, true).Find(&documents).Error; err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	var result []Document
 	for _, docID := range rs {
@@ -102,5 +108,5 @@ func SearchDocument(tableID string, fields []string, words []string, match map[s
 			}
 		}
 	}
-	return result, nil
+	return result, total, nil
 }

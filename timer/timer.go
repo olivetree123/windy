@@ -238,6 +238,9 @@ func Timer() {
 					log.Logger.Error(err)
 				}
 			}
+			if err = conn.Close(); err != nil {
+				log.Logger.Error(err)
+			}
 		}
 	}
 }
