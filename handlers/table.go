@@ -24,7 +24,7 @@ type TableCreateParam struct {
 	Fields          []Field
 	PrimaryField    string
 	UpdateTimeField string
-	DataSourceDbID  string // 关联的数据源
+	//DataSourceDbID  string // 关联的数据源
 }
 
 func (param *TableCreateParam) Validate() (bool, error) {
@@ -34,9 +34,9 @@ func (param *TableCreateParam) Validate() (bool, error) {
 	if param.DbID == "" {
 		return false, errors.New("dbID should not be null")
 	}
-	if param.DataSourceDbID == "" {
-		return false, errors.New("dataSourceDBID should not be null")
-	}
+	//if param.DataSourceDbID == "" {
+	//	return false, errors.New("dataSourceDBID should not be null")
+	//}
 	return true, nil
 }
 
@@ -58,12 +58,23 @@ func TableCreateHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
+	if _, err = models.GetDatabase(param.DbID); err != nil {
+		if err == gorm.ErrRecordNotFound {
+			log.Logger.Error(err)
+			return coco.ErrorResponse(200)
+		}
+		log.Logger.Error(err)
+		return coco.ErrorResponse(100)
+	}
+	if _, err = models.GetTableByName(param.DbID, param.Name); err == nil {
+		log.Logger.Error("table exists")
+		return coco.ErrorResponse(300)
+	}
 	var table models.Table
 	err = models.DB.Transaction(func(tx *gorm.DB) error {
 		table = models.Table{
 			Name:            param.Name,
 			DbID:            param.DbID,
-			DataSourceDbID:  param.DataSourceDbID,
 			PrimaryField:    param.PrimaryField,
 			UpdateTimeField: param.UpdateTimeField,
 		}

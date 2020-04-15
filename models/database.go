@@ -3,13 +3,21 @@ package models
 // Database 数据库
 type Database struct {
 	BaseModel
-	Name string `json:"name"`
+	Name           string `json:"name"`
+	Type           int    `json:"type"`
+	DataSourceDbID string `json:"dataSourceDbID"`
 }
 
 // NewDatabase 新建数据库
-func NewDatabase(name string) (*Database, error) {
+func NewDatabase(name string, dataSourceDbID string) (*Database, error) {
+	var dbType = 1
+	if dataSourceDbID != "" {
+		dbType = 2
+	}
 	db := Database{
-		Name: name,
+		Name:           name,
+		Type:           dbType,
+		DataSourceDbID: dataSourceDbID,
 	}
 	err := DB.Create(&db).Error
 	if err != nil {
@@ -39,6 +47,15 @@ func GetDatabaseByName(name string) (*Database, error) {
 func ListDatabase() ([]Database, error) {
 	var dbs []Database
 	err := DB.Find(&dbs, "status = ?", 1).Error
+	if err != nil {
+		return nil, err
+	}
+	return dbs, nil
+}
+
+func ListDbWithDataSource() ([]Database, error) {
+	var dbs []Database
+	err := DB.Find(&dbs, "status = ? and `type` = ?", 1, 2).Error
 	if err != nil {
 		return nil, err
 	}

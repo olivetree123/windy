@@ -59,7 +59,7 @@ func DataSourceDBCreateHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
-	if dataSource, _ := models.GetDataSourceDB(param.Name); dataSource != nil {
+	if dataSource, _ := models.GetDataSourceByName(param.Name); dataSource != nil {
 		log.Logger.Error("dataSource exists, name=", param.Name)
 		return coco.ErrorResponse(100)
 	}

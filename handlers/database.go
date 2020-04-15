@@ -18,7 +18,8 @@ type Param interface {
 
 // DBCreateParam 创建数据库参数
 type DBCreateParam struct {
-	Name string
+	Name           string
+	DataSourceDbID string
 }
 
 // Validate 参数验证
@@ -48,7 +49,7 @@ func DBCreateHandler(c *coco.Coco) coco.Result {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)
 	}
-	db, err := models.NewDatabase(param.Name)
+	db, err := models.NewDatabase(param.Name, param.DataSourceDbID)
 	if err != nil {
 		log.Logger.Error(err)
 		return coco.ErrorResponse(100)

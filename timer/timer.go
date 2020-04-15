@@ -34,7 +34,6 @@ func parseResultToMap(columns []string, data []interface{}) map[string]interface
 		v := *(data[i]).(*interface{})
 		result[k] = v
 	}
-	//log.Logger.Info("result = ", result)
 	for key, value := range result {
 		if value == nil {
 			result[key] = nil
@@ -59,18 +58,23 @@ func Timer() {
 	defer t.Stop()
 	for {
 		<-t.C
-		dbs, err := models.ListDataSourceDB()
+		dbs, err := models.ListDbWithDataSource()
 		if err != nil {
 			log.Logger.Error(err)
 			continue
 		}
 		for _, db := range dbs {
-			tables, err := models.ListTableByDataSourceDB(db.UID)
+			dataSource, err := models.GetDataSource(db.DataSourceDbID)
 			if err != nil {
 				log.Logger.Error(err)
 				continue
 			}
-			dbURL := fmt.Sprintf("%s:%s@(%s:%d)/%s", db.UserName, db.Password, db.Host, db.Port, db.DBName)
+			tables, err := models.ListTable(db.UID)
+			if err != nil {
+				log.Logger.Error(err)
+				continue
+			}
+			dbURL := fmt.Sprintf("%s:%s@(%s:%d)/%s", dataSource.UserName, dataSource.Password, dataSource.Host, dataSource.Port, dataSource.DBName)
 			conn, err := gorm.Open("mysql", dbURL)
 			if err != nil {
 				log.Logger.Error(err)

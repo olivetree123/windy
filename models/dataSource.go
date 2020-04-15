@@ -27,8 +27,16 @@ func NewDataSourceDB(name string, host string, port int, userName string, passwo
 	return &dataSource, nil
 }
 
-// GetDataSourceDB 获取数据源
-func GetDataSourceDB(name string) (*DataSourceDB, error) {
+func GetDataSource(uid string) (*DataSourceDB, error) {
+	var dataSource DataSourceDB
+	if err := DB.First(&dataSource, "uid = ? and status = ?", uid, true).Error; err != nil {
+		return nil, err
+	}
+	return &dataSource, nil
+}
+
+// GetDataSourceByName 获取数据源
+func GetDataSourceByName(name string) (*DataSourceDB, error) {
 	var dataSource DataSourceDB
 	if err := DB.First(&dataSource, "name = ? and status = ?", name, true).Error; err != nil {
 		return nil, err
