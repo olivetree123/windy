@@ -10,7 +10,7 @@ import (
 type Document struct {
 	BaseModel
 	TableID      string `json:"tableID"`
-	Content      string `json:"content"` // 文档内容
+	Content      string `json:"content"` // 文档内容。比如：{"id":1, "name":"olivetree"}
 	PrimaryValue string `json:"primaryValue"`
 	//Format  string `json:"format"`  // 文档格式，支持 string 和 json，默认为 string。v2：只需要支持 json
 }

@@ -1,10 +1,11 @@
 package main
 
 import (
-	"github.com/olivetree123/coco"
 	"windy/handlers"
 	"windy/log"
 	"windy/timer"
+
+	"github.com/olivetree123/coco"
 )
 
 func main() {
